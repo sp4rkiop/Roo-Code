@@ -1,0 +1,8 @@
+exercises
+
+.pnp.*
+
+.yarn
+
+.env.*
+!.env.*.sample
