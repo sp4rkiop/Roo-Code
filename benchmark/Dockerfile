@@ -1,55 +1,17 @@
+# docker build -f Dockerfile.base -t roo-code-benchmark-base ..
 # docker build -f Dockerfile -t roo-code-benchmark ..
 # docker run -d -it roo-code-benchmark
 # docker exec -it $(docker ps --filter "ancestor=roo-code-benchmark" -q) /bin/bash
 
-FROM ubuntu:latest
+FROM roo-code-benchmark-base
 
-# Install dependencies
-RUN apt update && apt install -y curl git vim
-
-# Install VS Code
-# https://code.visualstudio.com/docs/setup/linux
-RUN apt update && apt install -y wget gpg apt-transport-https
-RUN wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
-RUN install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
-RUN echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | tee /etc/apt/sources.list.d/vscode.list > /dev/null
-RUN rm -f packages.microsoft.gpg
-RUN apt update && apt install -y code
-
-# Install Xvfb
-RUN apt install -y xvfb
-
-# Install node.js
-RUN curl -sL https://deb.nodesource.com/setup_18.x | bash -
-RUN apt update && apt install -y nodejs
-
-# Create a `vscode` user
-RUN apt install -y sudo && \
-    useradd -m vscode -s /bin/bash && \
-    echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vscode && \
-    chmod 0440 /etc/sudoers.d/vscode
-
-WORKDIR /home/vscode
-USER vscode
-
-COPY benchmark/entrypoint.sh /usr/local/bin/
 COPY --chown=vscode:vscode . /home/vscode/repo
 
-WORKDIR /home/vscode/repo
-RUN npm run install-extension
-RUN npm run compile
-
-WORKDIR /home/vscode/repo/webview-ui
-RUN npm install
-RUN npm run build
-
 WORKDIR /home/vscode/repo/benchmark
-RUN npm install
-RUN npm run build
-RUN git clone https://github.com/cte/Roo-Code-Benchmark.git exercises
-
+USER vscode
 CMD ["/bin/bash"]
 
+# Commented out code preserved from original Dockerfile
 # FROM buildpack-deps:jammy
 
 # # Install Python 3.11

@@ -1,0 +1,40 @@
+FROM ubuntu:latest
+
+# Install dependencies
+RUN apt update && apt install -y curl git vim
+
+# Install VS Code
+# https://code.visualstudio.com/docs/setup/linux
+RUN apt update && apt install -y wget gpg apt-transport-https
+RUN wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
+RUN install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
+RUN echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | tee /etc/apt/sources.list.d/vscode.list > /dev/null
+RUN rm -f packages.microsoft.gpg
+RUN apt update && apt install -y code
+
+# Install Xvfb
+RUN apt install -y xvfb
+
+# Install node.js
+RUN curl -sL https://deb.nodesource.com/setup_18.x | bash -
+RUN apt update && apt install -y nodejs
+
+# Create a `vscode` user
+RUN apt install -y sudo && \
+    useradd -m vscode -s /bin/bash && \
+    echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vscode && \
+    chmod 0440 /etc/sudoers.d/vscode
+
+WORKDIR /home/vscode
+USER vscode
+
+COPY --chown=vscode:vscode package*.json /home/vscode/repo/
+COPY --chown=vscode:vscode webview-ui/package*.json /home/vscode/repo/webview-ui/
+COPY --chown=vscode:vscode e2e/package*.json /home/vscode/repo/e2e/
+COPY --chown=vscode:vscode benchmark/package*.json /home/vscode/repo/benchmark/
+
+WORKDIR /home/vscode/repo
+RUN npm run install:all
+
+WORKDIR /home/vscode/repo/benchmark
+RUN git clone https://github.com/cte/Roo-Code-Benchmark.git exercises
