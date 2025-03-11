@@ -3,16 +3,30 @@ type WaitForOptions = {
 	interval?: number
 }
 
-export const waitFor = (condition: () => boolean, { timeout = 10_000, interval = 250 }: WaitForOptions = {}) =>
-	Promise.race([
+export const waitFor = (condition: () => boolean, { timeout = 10_000, interval = 250 }: WaitForOptions = {}) => {
+	let timeoutId: NodeJS.Timeout | undefined = undefined
+
+	return Promise.race([
 		new Promise<void>((resolve) => {
-			const check = () => (condition() ? resolve() : setTimeout(check, interval))
+			const check = () => {
+				if (condition()) {
+					if (timeoutId) {
+						clearTimeout(timeoutId)
+						timeoutId = undefined
+					}
+
+					resolve()
+				} else {
+					setTimeout(check, interval)
+				}
+			}
+
 			check()
 		}),
-		new Promise((_, reject) =>
-			setTimeout(() => {
-				console.log(`Timeout after ${Math.floor(timeout / 1000)}s`)
+		new Promise((_, reject) => {
+			timeoutId = setTimeout(() => {
 				reject(new Error(`Timeout after ${Math.floor(timeout / 1000)}s`))
-			}, timeout),
-		),
+			}, timeout)
+		}),
 	])
+}

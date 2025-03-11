@@ -1,3 +1,5 @@
+import * as vscode from "vscode"
+
 export interface RooCodeAPI {
 	/**
 	 * Sets the custom instructions in the global storage.

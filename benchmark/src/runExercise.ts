@@ -4,6 +4,9 @@ import { RooCodeAPI } from "../../src/exports/roo-code"
 
 import { waitFor } from "./utils"
 
+const TIME_LIMIT = 300_000
+const STALL_LIMIT = 60_000
+
 export async function run() {
 	const extension = vscode.extensions.getExtension<RooCodeAPI>("RooVeterinaryInc.roo-cline")
 
@@ -12,49 +15,52 @@ export async function run() {
 	}
 
 	const api = extension.isActive ? extension.exports : await extension.activate()
-
-	await api.sidebarProvider.updateGlobalState("apiProvider", "openrouter")
-	await api.sidebarProvider.updateGlobalState("openRouterModelId", "anthropic/claude-3.7-sonnet")
-	await api.sidebarProvider.updateGlobalState("autoApprovalEnabled", true)
-	await api.sidebarProvider.updateGlobalState("alwaysAllowReadOnly", true)
-	await api.sidebarProvider.updateGlobalState("alwaysAllowWrite", true)
-	await api.sidebarProvider.updateGlobalState("alwaysAllowExecute", true)
-	await api.sidebarProvider.updateGlobalState("alwaysAllowBrowser", true)
-	await api.sidebarProvider.updateGlobalState("alwaysApproveResubmit", true)
-	await api.sidebarProvider.updateGlobalState("alwaysAllowMcp", true)
-	await api.sidebarProvider.updateGlobalState("alwaysAllowModeSwitch", true)
-
-	await api.sidebarProvider.storeSecret("openRouterApiKey", process.env.OPENROUTER_API_KEY!)
+	const provider = api.sidebarProvider
+	await provider.updateGlobalState("apiProvider", "openrouter")
+	await provider.updateGlobalState("openRouterModelId", "anthropic/claude-3.7-sonnet")
+	await provider.updateGlobalState("autoApprovalEnabled", true)
+	await provider.updateGlobalState("alwaysAllowReadOnly", true)
+	await provider.updateGlobalState("alwaysAllowWrite", true)
+	await provider.updateGlobalState("alwaysAllowExecute", true)
+	await provider.updateGlobalState("alwaysAllowBrowser", true)
+	await provider.updateGlobalState("alwaysApproveResubmit", true)
+	await provider.updateGlobalState("alwaysAllowMcp", true)
+	await provider.updateGlobalState("alwaysAllowModeSwitch", true)
+	await provider.storeSecret("openRouterApiKey", process.env.OPENROUTER_API_KEY!)
 
 	await vscode.workspace
 		.getConfiguration("roo-cline")
 		.update("allowedCommands", ["*"], vscode.ConfigurationTarget.Global)
 
-	await api.sidebarProvider.resolveWebviewView(
-		vscode.window.createWebviewPanel("roo-cline.SidebarProvider", "Roo Code", vscode.ViewColumn.One, {
-			enableScripts: true,
-			enableCommandUris: true,
-			retainContextWhenHidden: true,
-			localResourceRoots: [extension.extensionUri],
-		}),
-	)
-
-	await waitFor(() => api.sidebarProvider.viewLaunched)
+	await vscode.commands.executeCommand("roo-cline.SidebarProvider.focus")
+	await waitFor(() => provider.viewLaunched)
 
 	await api.startNewTask(process.env.prompt!)
 
 	let cursor = 0
 
+	const startTime = Date.now()
+
 	const getMessage = async () => {
-		await waitFor(() => api.sidebarProvider.messages.length > cursor, { timeout: 120_000 }).catch(() => {})
-		return api.sidebarProvider.messages[cursor++]
+		await waitFor(() => provider.messages.length > cursor, { timeout: STALL_LIMIT })
+		return provider.messages[cursor++]
 	}
 
 	while (true) {
-		const message = await getMessage()
-		console.log("message = ", message)
+		try {
+			const message = await getMessage()
+			console.log("message = ", message)
 
-		if (!message || message.say === "completion_result") {
+			if (!message || message.say === "completion_result") {
+				break
+			}
+		} catch (e) {
+			console.error(e)
+			break
+		}
+
+		if (Date.now() - startTime > TIME_LIMIT) {
+			console.log("Time's up!")
 			break
 		}
 	}

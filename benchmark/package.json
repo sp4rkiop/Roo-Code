@@ -7,8 +7,10 @@
 		"lint": "eslint src --ext ts",
 		"check-types": "tsc --noEmit",
 		"build": "rm -rf out && tsc -p tsconfig.json",
-		"benchmark": "xvbf-run node out/run.js",
+		"benchmark": "npx dotenvx run -f .env.local -- node out/run.js",
+		"cli": "tsx src/cli.ts",
 		"clean": "rimraf out",
+		"clean:exercises": "cd exercises && git checkout -f && git clean -fd",
 		"docker:base:build": "docker build -f Dockerfile.base -t roo-code-benchmark-base ..",
 		"docker:build": "npm run docker:base:build && docker build -f Dockerfile -t roo-code-benchmark ..",
 		"docker:run": "docker run -d -it roo-code-benchmark",
@@ -22,13 +24,14 @@
 		"docker:dev:run": "docker run -d -p 2222:22 -v ~/Documents/Roo-Code:/home/vscode/repo -it roo-code-benchmark-dev",
 		"docker:dev:start": "npm run docker:dev:build && npm run docker:dev:run",
 		"docker:dev:shell": "docker exec -it $(docker ps --filter \"ancestor=roo-code-benchmark-dev\" -q) /bin/bash",
-		"docker:dev:benchmark": "docker exec -it $(docker ps --filter \"ancestor=roo-code-benchmark-dev\" -q) npm run benchmark --",
+		"docker:dev:benchmark": "docker exec -it $(docker ps --filter \"ancestor=roo-code-benchmark-dev\" -q) xvbf-run npm run benchmark --",
 		"docker:dev:stop": "docker stop $(docker ps --filter \"ancestor=roo-code-benchmark-dev\" -q)",
 		"docker:dev:rm": "docker rm $(docker ps -a --filter \"ancestor=roo-code-benchmark-dev\" -q)",
 		"docker:dev:clean": "npm run docker:dev:stop && npm run docker:dev:rm"
 	},
 	"devDependencies": {
 		"@vscode/test-electron": "^2.4.0",
+		"gluegun": "^5.1.2",
 		"tsx": "^4.19.3",
 		"typescript": "^5.4.5",
 		"yargs": "^17.7.2"
