@@ -19,3 +19,15 @@ Run an exercise:
 ```sh
 npm run docker:benchmark -- -e exercises/javascript/binary
 ```
+
+Use the cli to select and run an exercise:
+
+```sh
+npm run cli
+```
+
+Run the full benchmark:
+
+```sh
+# ... TODO ...
+```
